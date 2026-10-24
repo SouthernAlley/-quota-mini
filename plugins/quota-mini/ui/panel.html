@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>额度小窗</title>
+  <style>/*__QUOTA_CSS__*/</style>
+</head>
+<body>
+  <main class="card" aria-label="ChatGPT Work 与 Codex 剩余额度">
+    <header>
+      <div class="heading"><span class="dot" id="dot"></span><h1>剩余额度</h1></div>
+      <nav aria-label="面板操作">
+        <button id="desktop" type="button" title="桌面全局悬浮" aria-label="桌面全局悬浮" disabled>
+          <svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="3" width="15" height="10.5" rx="2"/><path d="M7 17h6m-3-3.5V17m1-11h4v4m0-4-5 5"/></svg>
+        </button>
+        <button id="refresh" type="button" title="刷新额度" aria-label="刷新额度" disabled>
+          <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M15.5 7A6 6 0 1 0 16 12M15.5 3v4h-4"/></svg>
+        </button>
+        <button id="float" type="button" title="悬浮显示" aria-label="悬浮显示" disabled hidden>
+          <svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="3.5" width="15" height="13" rx="2"/><rect x="9.5" y="9.5" width="5.5" height="4.5" rx=".7"/></svg>
+        </button>
+      </nav>
+    </header>
+    <section class="quota" id="short-row" aria-label="短时剩余额度">
+      <div class="row"><span id="short-label">5 小时</span><span class="percent" id="short-value">—</span></div>
+      <div class="track" id="short-meter" role="progressbar" aria-label="短时剩余额度" aria-valuemin="0" aria-valuemax="100"><span id="short-bar"></span></div>
+      <div class="reset" id="short-reset">等待读取</div>
+    </section>
+    <section class="quota" id="week-row" aria-label="每周剩余额度">
+      <div class="row"><span>本周</span><span class="percent" id="week-value">—</span></div>
+      <div class="track" id="week-meter" role="progressbar" aria-label="每周剩余额度" aria-valuemin="0" aria-valuemax="100"><span id="week-bar"></span></div>
+      <div class="reset" id="week-reset">等待读取</div>
+    </section>
+    <p id="notice" role="status" hidden></p>
+    <footer><span id="updated">正在连接…</span><span>Work / Codex</span></footer>
+  </main>
+  <script>/*__QUOTA_JS__*/</script>
+</body>
+</html>

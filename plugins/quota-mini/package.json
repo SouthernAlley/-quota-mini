@@ -1,0 +1,14 @@
+{
+  "name": "quota-mini-local",
+  "version": "0.2.5",
+  "private": true,
+  "type": "module",
+  "description": "Local read-only ChatGPT Work / Codex quota panel",
+  "scripts": {
+    "start": "node server.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "probe": "node scripts/probe.mjs"
+  },
+  "license": "MIT",
+  "author": "SouthernAlley"
+}

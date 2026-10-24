@@ -1,0 +1,24 @@
+{
+  "name": "quota-mini",
+  "version": "0.2.5",
+  "description": "ChatGPT Work / Codex 剩余额度：内嵌卡片或 Windows 桌面置顶悬浮窗。仅本机读取，无广告。",
+  "mcpServers": "./.mcp.json",
+  "requires_local_executor": true,
+  "interface": {
+    "displayName": "额度小窗",
+    "shortDescription": "两行查看剩余额度和重置时间",
+    "longDescription": "本地自制插件，支持 Windows 桌面全局悬浮和 ChatGPT 内嵌卡片，每分钟更新订阅剩余额度。桌面窗口由插件附带的轻量本机组件显示。复用已有登录，不填密钥，不调用模型。",
+    "developerName": "SouthernAlley",
+    "category": "Productivity",
+    "capabilities": [
+      "Interactive",
+      "Read"
+    ],
+    "logo": "./assets/icon.svg",
+    "composerIcon": "./assets/icon.svg",
+    "brandColor": "#299B7E",
+    "defaultPrompt": [
+      "打开额度小窗"
+    ]
+  }
+}

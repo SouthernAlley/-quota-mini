@@ -1,0 +1,20 @@
+{
+  "name": "quota-mini-preview",
+  "interface": {
+    "displayName": "Quota Mini Preview"
+  },
+  "plugins": [
+    {
+      "name": "quota-mini",
+      "source": {
+        "source": "local",
+        "path": "./plugins/quota-mini"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

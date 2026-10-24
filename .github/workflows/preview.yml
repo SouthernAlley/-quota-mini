@@ -1,0 +1,74 @@
+name: Check and publish preview
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: quota-mini-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  checks:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Verify Node runtime
+        run: node -e "if (+process.versions.node.split('.')[0] < 20) process.exit(1); console.log(process.version)"
+      - name: Core and protocol checks
+        working-directory: plugins/quota-mini
+        shell: bash
+        run: |
+          node --test tests/*.test.mjs
+          node scripts/check-mcp.mjs
+      - name: Windows view checks without showing GUI
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          & powershell.exe -NoLogo -NoProfile -NonInteractive -STA -ExecutionPolicy Bypass -File plugins/quota-mini/scripts/test-window-settings.ps1
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & powershell.exe -NoLogo -NoProfile -NonInteractive -STA -ExecutionPolicy Bypass -File plugins/quota-mini/scripts/test-compact-windows.ps1
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+  publish:
+    needs: checks
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Publish source preview after checks
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          version="$(node -p "require('./plugins/quota-mini/package.json').version")"
+          tag="v${version}"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo "Release $tag already exists; leaving it unchanged."
+            exit 0
+          fi
+          asset="quota-mini-${version}-source.zip"
+          git archive --format=zip --prefix="quota-mini-${version}/" --output="$asset" HEAD
+          sha256sum "$asset" > SHA256SUMS.txt
+          gh release create "$tag" "$asset" SHA256SUMS.txt \
+            --target "$GITHUB_SHA" --prerelease --latest=false \
+            --title "Quota Mini ${version} (Preview)" --notes-file RELEASE_NOTES.md
