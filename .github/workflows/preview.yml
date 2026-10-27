@@ -19,19 +19,29 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
+        node: [20, 24]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: ${{ matrix.node }}
       - name: Verify Node runtime
-        run: node -e "if (+process.versions.node.split('.')[0] < 20) process.exit(1); console.log(process.version)"
+        run: node -e "if (+process.versions.node.split('.')[0] !== ${{ matrix.node }}) process.exit(1); console.log(process.version)"
+      - name: Version, license and release guard checks
+        shell: bash
+        run: |
+          node scripts/check-release.mjs source
+          node --test scripts/check-release.test.mjs
+          python scripts/test-archive.py
       - name: Core and protocol checks
         working-directory: plugins/quota-mini
         shell: bash
         run: |
-          node --test tests/*.test.mjs
+          node --test tests/core.test.mjs tests/desktop.test.mjs
           node scripts/check-mcp.mjs
       - name: Windows view checks without showing GUI
         if: runner.os == 'Windows'
@@ -53,6 +63,7 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           persist-credentials: false
+          fetch-depth: 0
       - name: Publish source preview after checks
         shell: bash
         env:
@@ -62,13 +73,31 @@ jobs:
           set -euo pipefail
           version="$(node -p "require('./plugins/quota-mini/package.json').version")"
           tag="v${version}"
-          if gh release view "$tag" >/dev/null 2>&1; then
-            echo "Release $tag already exists; leaving it unchanged."
+          gh release list --limit 1000 --json tagName --jq '.[].tagName' > release-tags.txt
+          if grep -Fxq "$tag" release-tags.txt; then
+            mkdir -p release-check
+            gh api "repos/$GH_REPO/releases/tags/$tag" > release-check/release.json
+            gh release download "$tag" --pattern "quota-mini-${version}-source.zip" --pattern SHA256SUMS.txt --dir release-check
+            node scripts/check-release.mjs existing release-check
+            release_commit="$(git rev-parse "refs/tags/${tag}^{commit}")"
+            python scripts/verify-archive.py --zip "release-check/quota-mini-${version}-source.zip" --version "$version" --commit "$release_commit"
+            echo "Existing release commit and all asset contents verified; leaving release unchanged."
             exit 0
+          fi
+          if git show-ref --verify --quiet "refs/tags/$tag"; then
+            echo "Tag exists without a published release. Review it before publishing."
+            exit 1
           fi
           asset="quota-mini-${version}-source.zip"
           git archive --format=zip --prefix="quota-mini-${version}/" --output="$asset" HEAD
           sha256sum "$asset" > SHA256SUMS.txt
+          python scripts/verify-archive.py --zip "$asset" --version "$version" --commit HEAD
           gh release create "$tag" "$asset" SHA256SUMS.txt \
             --target "$GITHUB_SHA" --prerelease --latest=false \
             --title "Quota Mini ${version} (Preview)" --notes-file RELEASE_NOTES.md
+          mkdir -p release-check
+          gh api "repos/$GH_REPO/releases/tags/$tag" > release-check/release.json
+          gh release download "$tag" --pattern "$asset" --pattern SHA256SUMS.txt --dir release-check
+          git fetch origin "refs/tags/$tag:refs/tags/$tag"
+          node scripts/check-release.mjs existing release-check
+          python scripts/verify-archive.py --zip "release-check/$asset" --version "$version" --commit "$GITHUB_SHA"

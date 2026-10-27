@@ -1,8 +1,8 @@
-# 数据处理说明（发布草稿）
+# 数据处理说明（0.2.5 预览版）
 
 - 数据来源：本机已安装的 Codex App Server，调用 account/rateLimits/read。官方组件复用用户自己的登录并可能按其正常逻辑刷新登录状态。
 - 返回界面：筛选后的剩余百分比、窗口长度、重置时间、读取时间和固定错误提示。不返回身份信息、密钥或聊天。
 - 联网：本工具代码没有作者控制的服务端，不监听 HTTP 端口。官方额度组件需要访问 OpenAI，不应宣传为完全离线。
-- 本地保存：LOCALAPPDATA/QuotaMini/window.json，只包含位置、缩放、透明度和缩小状态，不保存额度或凭据。
+- 本地保存：`%LOCALAPPDATA%\QuotaMini\window.json`，只包含位置、缩放、透明度和缩小状态，不保存额度或凭据。PowerShell 中可使用 `Join-Path $env:LOCALAPPDATA 'QuotaMini\window.json'` 定位。
 - 进程：桌面窗口与 Node 刷新进程通过匿名管道通信；单实例使用本机命名事件。界面操作是本地状态变更，额度查询是只读。
 - 边界：这是源码审阅结论和已做测试的范围，不是第三方安全审计或对所有依赖/系统环境的保证。企业策略可能禁止 PowerShell、本地 MCP 或动态编译。
