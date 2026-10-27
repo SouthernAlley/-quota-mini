@@ -6,7 +6,7 @@ import { resolve, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 export function checkSource(root) {
-  const read = path => readFileSync(join(root, path), 'utf8');
+  const read = path => readFileSync(join(root, path), 'utf8').replace(/\r\n/g, '\n');
   const pkg = JSON.parse(read('plugins/quota-mini/package.json'));
   const manifest = JSON.parse(read('plugins/quota-mini/.codex-plugin/plugin.json'));
   const market = JSON.parse(read('.agents/plugins/marketplace.json'));

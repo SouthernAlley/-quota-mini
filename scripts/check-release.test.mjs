@@ -1,7 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { checkPublished } from './check-release.mjs';
+import { readFileSync, writeFileSync, mkdirSync, mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join, dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { checkPublished, checkSource } from './check-release.mjs';
 
 function fixture() {
   const zipName = 'quota-mini-0.2.5-source.zip';
@@ -25,4 +29,34 @@ for (const [name, mutate] of [
   ['unpublished draft', f => { f.release.draft = true; }],
 ]) test(`rejects ${name}`, () => {
   const f = fixture(); mutate(f); assert.throws(() => checkPublished(f.release, '0.2.5', f.commit, f.files, f.pinned));
+});
+
+// Windows checkout can use CRLF. Exercise a full source fixture, then break real release invariants.
+test('source consistency accepts CRLF and rejects version, market and license drift', t => {
+  const source = fileURLToPath(new URL('../', import.meta.url));
+  const root = mkdtempSync(join(tmpdir(), 'quota-mini-source-check-'));
+  t.after(() => {
+    assert.equal(dirname(resolve(root)), resolve(tmpdir()));
+    assert.ok(root.startsWith(join(tmpdir(), 'quota-mini-source-check-')));
+    rmSync(root, { recursive: true, force: true });
+  });
+  const files = ['plugins/quota-mini/package.json', 'plugins/quota-mini/.codex-plugin/plugin.json',
+    '.agents/plugins/marketplace.json', 'plugins/quota-mini/scripts/configure-local.mjs',
+    'plugins/quota-mini/lib/mcp.mjs', 'plugins/quota-mini/lib/codex-quota.mjs',
+    'plugins/quota-mini/ui/panel.js', 'README.md', 'RELEASE_NOTES.md', 'LICENSE', 'plugins/quota-mini/LICENSE'];
+  for (const file of files) {
+    const dest = join(root, file); mkdirSync(dirname(dest), { recursive: true });
+    writeFileSync(dest, readFileSync(join(source, file), 'utf8').replace(/\r?\n/g, '\r\n'));
+  }
+  const version = JSON.parse(readFileSync(join(root, 'plugins/quota-mini/package.json'), 'utf8')).version;
+  assert.equal(checkSource(root), version);
+  for (const [path, mutate] of [
+    ['plugins/quota-mini/.codex-plugin/plugin.json', s => { const p = JSON.parse(s); p.version = '999.0.0'; return JSON.stringify(p); }],
+    ['.agents/plugins/marketplace.json', s => s.replace('quota-mini-preview', 'wrong-market')],
+    ['plugins/quota-mini/LICENSE', s => s + 'changed'],
+  ]) {
+    const dest = join(root, path); const original = readFileSync(dest, 'utf8');
+    writeFileSync(dest, mutate(original)); assert.throws(() => checkSource(root));
+    writeFileSync(dest, original);
+  }
 });
